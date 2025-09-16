@@ -12,6 +12,7 @@ a.active{
 @media (max-width:768px) {
   .cont{
     padding-left: 0px !important;
+    padding-bottom: 60px;
   }
 }
 
