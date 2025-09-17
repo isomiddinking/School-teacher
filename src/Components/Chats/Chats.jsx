@@ -1,17 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, onSnapshot, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
-import { db, auth } from '../../firebase';
+import { collection, onSnapshot, query, where, doc, updateDoc } from 'firebase/firestore';
+import { db, auth, messaging } from '../../firebase'; // messaging ham qo‘shildi
 import { IoArrowBackOutline, IoInformationCircleOutline } from 'react-icons/io5';
 import { FiLoader } from 'react-icons/fi';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { onMessage } from "firebase/messaging";
 
 const Chats = () => {
     const navigate = useNavigate();
     const [pickupRequests, setPickupRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const currentUser = auth.currentUser;
+
+    // 🔔 Push notification listener
+    useEffect(() => {
+        if (messaging) {
+            onMessage(messaging, (payload) => {
+                console.log("Push notification keldi:", payload);
+                toast.info(`${payload.notification.title}: ${payload.notification.body}`);
+            });
+        }
+    }, []);
 
     useEffect(() => {
         if (!currentUser) {
@@ -49,6 +60,17 @@ const Chats = () => {
     const handleUpdateStatus = useCallback(async (id, status, successMessage) => {
         try {
             await updateDoc(doc(db, 'pickupRequests', id), { status });
+
+            // 🔔 So‘rovni yangilaganda push yuborish uchun backend’ga signal yuborasiz
+            await fetch("https://YOUR_BACKEND_URL/sendNotification", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    title: "Olib ketish so‘rovi",
+                    body: successMessage,
+                }),
+            });
+
             toast.success(successMessage);
         } catch (error) {
             console.error(`So'rovni ${status} qilishda xatolik: `, error);
@@ -56,12 +78,17 @@ const Chats = () => {
         }
     }, []);
 
-    const handleAcceptRequest = (id) => handleUpdateStatus(id, 'accepted', "So'rov muvaffaqiyatli tasdiqlandi!");
-    const handleRejectRequest = (id) => handleUpdateStatus(id, 'rejected', "So'rov rad etildi.");
+    const handleAcceptRequest = (id) =>
+        handleUpdateStatus(id, 'accepted', "So'rov muvaffaqiyatli tasdiqlandi!");
+    const handleRejectRequest = (id) =>
+        handleUpdateStatus(id, 'rejected', "So'rov rad etildi.");
 
     const formatTimestamp = (date) => {
         if (!date) return 'Maʼlumot yoʻq';
-        return date.toLocaleString('uz-UZ', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return date.toLocaleString('uz-UZ', {
+            year: 'numeric', month: 'long', day: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
     };
 
     const getStatusTextAndColor = (status) => {

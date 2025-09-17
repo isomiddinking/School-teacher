@@ -1,10 +1,9 @@
-// src/firebase/firebase.jsx
-
+// firebase.js
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import { getMessaging, getToken } from "firebase/messaging";
 
-// Firebase konsolida olingan o'z konfiguratsiya ma'lumotlaringizni kiriting.
 const firebaseConfig = {
    apiKey: "AIzaSyCkRSwRNewCa7cM2Jsy7BS2_H1vsGn9LrA",
   authDomain: "school-e09a3.firebaseapp.com",
@@ -15,9 +14,19 @@ const firebaseConfig = {
   measurementId: "G-8KKP4YN9N0"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
 
-export { auth, db };
+export const db = getFirestore(app);
+export const auth = getAuth(app);
+export const messaging = getMessaging(app);
+
+// Foydalanuvchi tokenini olish
+export const requestPermission = async () => {
+  try {
+    const token = await getToken(messaging, { vapidKey: "AIzaSyCkRSwRNewCa7cM2Jsy7BS2_H1vsGn9LrA" });
+    console.log("Foydalanuvchi FCM tokeni:", token);
+    return token;
+  } catch (err) {
+    console.error("Token olishda xatolik:", err);
+  }
+};
